@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 // Generic API request function
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
@@ -46,6 +46,20 @@ export const authAPI = {
   logout: async () => {
     return apiRequest('/auth/logout', {
       method: 'POST',
+    });
+  },
+
+  forgotPassword: async (email: string) => {
+    return apiRequest('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword: async (token: string, password: string) => {
+    return apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
     });
   },
 };

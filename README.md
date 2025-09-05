@@ -389,3 +389,22 @@ For development questions or issues:
 **Last Updated:** August 21, 2024  
 **Version:** 1.0.0-alpha  
 **Status:** Development - Core Infrastructure Complete ✅
+
+# Environment Variables
+
+This project uses environment variables for configuration. Copy `.env.example` to `.env` and update the values:
+
+```bash
+cp .env.example .env
+```
+
+## Required Variables
+
+- `VITE_GRAPHQL_API_URL`: The GraphQL API endpoint URL
+- `VITE_PODIUM_API_TOKEN`: The Podium API authentication token
+- `VITE_API_BASE_URL`: The backend API base URL
+
+## Security Note
+
+Never commit the `.env` file to version control. The `.env` file is already included in `.gitignore`.
+

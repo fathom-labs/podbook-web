@@ -21,7 +21,18 @@ import Onboarding from "./pages/Onboarding";
 import OnboardingGuard from "./components/OnboardingGuard";
 import { ApolloProvider } from '@apollo/client';
 import client from './lib/apolloClient';
-
+import MoneyBackGuarantee from "./pages/MoneyBackGuarantee";
+import OrderProcessing from "./pages/OrderProcessing";
+import BookCompleted from "./pages/BookCompleted";
+import BookReview from "./pages/BookReview";
+import BookPostApproval from "./pages/BookPostApproval";
+import BookUnderReview from "./pages/BookUnderReview";
+import ComponentLibrary from "./pages/ComponentLibrary";
+import AIEditor from "./pages/AIEditor";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import BookLandingPageVariations from "./pages/BookLandingPageVariations";
+import FilePrep from "./pages/FilePrep";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +48,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/start" element={<Start />} />
               <Route path="/dashboard" element={
@@ -69,7 +82,23 @@ const App = () => (
                   <Settings />
                 </OnboardingGuard>
               } />
+              <Route path="/file-prep" element={
+                <OnboardingGuard>
+                  <FilePrep />
+                </OnboardingGuard>
+              } />
               <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/money-back-guarantee" element={<MoneyBackGuarantee />} />
+              <Route path="/order-processing" element={<OrderProcessing />} />
+              <Route path="/order-processing/:orderId" element={<OrderProcessing />} />
+              <Route path="/book-completed/:id" element={<BookCompleted />} />
+              <Route path="/book-review/:id" element={<BookReview />} />
+              <Route path="/book-post-approval/:id" element={<BookPostApproval />} />
+              <Route path="/book-under-review/:id" element={<BookUnderReview />} />
+              <Route path="/component-library" element={<ComponentLibrary />} />
+              <Route path="/ai-editor" element={<AIEditor />} />
+              <Route path="/ai-editor/:projectId" element={<AIEditor />} />
+              <Route path="/book-landing-variations" element={<BookLandingPageVariations />} />
               <Route path="/api-test" element={<ApiTest />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

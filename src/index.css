@@ -287,3 +287,148 @@ html:not(.dark) .logo-svg {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
 }
+
+/* Content Protection Styles */
+.content-protected {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+  -khtml-user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.content-protected * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+  -khtml-user-select: none !important;
+}
+
+/* Disable text selection globally when protection is active */
+body.content-protection-active {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+body.content-protection-active * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+/* 3D Transform Utilities for Book Cover */
+@layer utilities {
+  .perspective-\[1000px\] {
+    perspective: 1000px;
+  }
+
+  .transform-style-preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .rotate-y-20 {
+    transform: rotateY(20deg);
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+
+  .rotate-y-\[-80deg\] {
+    transform: rotateY(-80deg);
+  }
+
+  .rotate-x-180 {
+    transform: rotateX(180deg);
+  }
+
+  .translate-z-\[-30px\] {
+    transform: translateZ(-30px);
+  }
+
+  .translate-x-\[-14px\] {
+    transform: translateX(-14px);
+  }
+
+  .translate-x-\[5px\] {
+    transform: translateX(5px);
+  }
+
+  .duration-600 {
+    transition-duration: 600ms;
+  }
+}
+
+/* 3D Book Component Styles */
+@layer components {
+  .book-3d-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 600px;
+    perspective: 1500px;
+  }
+
+  .book-wrapper {
+    perspective: 1500px;
+  }
+
+  .book {
+    position: relative;
+    z-index: 1;
+    width: 350px;
+    height: 500px;
+    transform-style: preserve-3d;
+    transition: transform 1s ease;
+    transform: rotateX(0deg) rotateY(-30deg);
+  }
+
+  .book:hover {
+    transform: rotateX(5deg) rotateY(-50deg);
+  }
+
+  .book__front,
+  .book__back {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .book__paper {
+    position: absolute;
+    top: 1%;
+    right: 0;
+    height: 98%;
+    background: 
+      linear-gradient(90deg, rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0)), 
+      repeating-linear-gradient(90deg, white, #e2e2e2 1px, white 3px, #9a9a9a 1px);
+  }
+
+  .book-shadow {
+    position: absolute;
+    width: 400px;
+    background: radial-gradient(70% 85%, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0) 100%);
+    transform: rotateX(90deg) rotateZ(30deg);
+    transition: transform 1s ease;
+    filter: blur(16px);
+  }
+
+  .book:hover + .book-shadow {
+    transform: rotateX(90deg) rotateZ(40deg);
+  }
+}

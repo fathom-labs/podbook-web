@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import LogoMark from "@/components/LogoMark";
 
 const Login = () => {
   const { theme } = useTheme();
@@ -61,11 +62,9 @@ const Login = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img 
-            src={theme === 'dark' ? '/logo-white.svg' : '/logo.svg'} 
-            alt="Podbook Logo" 
-            className="w-16 h-16 mx-auto mb-4" 
-          />
+          <div className="mb-4">
+            <LogoMark size="xl" className="mx-auto" />
+          </div>
           <h1 className="text-3xl font-medium text-foreground mb-2">Welcome back</h1>
           <p className="text-muted-foreground">Sign in to your Podbook account</p>
         </div>
@@ -103,6 +102,14 @@ const Login = () => {
                   required
                   className="border-border bg-background text-foreground"
                 />
+                <div className="text-right">
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-sm text-primary hover:underline font-medium"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
               </div>
               
               <Button 

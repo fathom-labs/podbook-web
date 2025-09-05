@@ -241,7 +241,7 @@ const AITextEditor = ({ projectId, projectTitle }: AITextEditorProps) => {
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
                            {/* Left Chapter Navigation */}
-                   <aside className={`bg-black flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${showChapterDrawer ? 'w-80' : 'w-12'}`}>
+                   <aside className={`bg-card border-r border-border flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${showChapterDrawer ? 'w-80' : 'w-12'}`}>
                      {/* Chapter Header with Toggle */}
                      <div className="flex items-center gap-2 p-3 min-w-fit">
                        <Button

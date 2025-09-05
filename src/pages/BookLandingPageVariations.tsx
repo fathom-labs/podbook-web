@@ -1,82 +1,37 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import AITextEditor from "@/components/AITextEditor";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
+  BookOpen, 
   Download, 
   Eye, 
-  Calendar, 
-  Clock, 
-  FileText, 
-  Rss, 
-  User,
-  Target,
-  ArrowLeft,
-  Share2,
-  Edit3,
-  Loader2,
   MessageSquare,
   CheckCircle,
+  Clock,
+  ArrowLeft,
+  User,
+  MessageCircle,
   X,
-  Sparkles,
-  MessageCircle
-} from "lucide-react";
-import { Label } from "@/components/ui/label";
-import LeftNavigation from "@/components/LeftNavigation";
-import BookOverview from "@/components/BookOverview";
-import Book3D from "@/components/Book3D";
-import { projectAPI } from "@/services/api";
+  Sparkles
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import LeftNavigation from '@/components/LeftNavigation';
+import Book3D from '@/components/Book3D';
+import RefundRequestModal from '@/components/RefundRequestModal';
+
+type BookState = 'processing' | 'under-review' | 'post-approval' | 'completed';
 
 interface Chapter {
-  id: string;
   title: string;
-  description: string;
-  wordCount: number;
-  estimatedPages: number;
+  pages: number;
+  words: string;
 }
 
-interface Upload {
-  id: string;
-  filename: string;
-  url: string;
-  size: number; // duration in seconds
-  contentType: string;
-  source: string;
-  status: string;
-  createdAt: string;
-  projectId: string;
-  userId: string;
-}
-
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  audience: string;
-  rss_url: string;
-  status: 'DRAFT' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  created_at: string;
-  pages_count: number;
-  word_count: number;
-  chapters_count: number;
-  file_size: string;
-  format: string;
-  estimated_cost: number;
-  chapters?: Chapter[];
-  type?: string;
-  uploads?: Upload[];
-}
-
-const ProjectDetail = () => {
-  const { id } = useParams<{ id: string }>();
+const BookLandingPageVariations = () => {
   const navigate = useNavigate();
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  const [currentState, setCurrentState] = useState<BookState>('processing');
   
   // Modal states
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -84,225 +39,16 @@ const ProjectDetail = () => {
   const [showViewBookModal, setShowViewBookModal] = useState(false);
   const [showOrderPlacedModal, setShowOrderPlacedModal] = useState(false);
   const [showOrderCompletedModal, setShowOrderCompletedModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchProject = async () => {
-      if (!id) return;
-      try {
-        const resp = await projectAPI.getProject(id);
-        const data = (resp?.data ?? resp) as any;
+  const states: { value: BookState; label: string; color: string; bgColor: string; borderColor: string }[] = [
+    { value: 'processing', label: 'Processing', color: 'primary', bgColor: 'from-primary/5 to-primary/10', borderColor: 'border-primary/20' },
+    { value: 'completed', label: 'Completed', color: 'primary', bgColor: 'from-primary/5 to-primary/10', borderColor: 'border-primary/20' },
+    { value: 'post-approval', label: 'Approved', color: 'primary', bgColor: 'from-primary/5 to-primary/10', borderColor: 'border-primary/20' },
+    { value: 'under-review', label: 'Under Review', color: 'muted', bgColor: 'from-muted/5 to-muted/10', borderColor: 'border-muted/20' }
+  ];
 
-        // Normalize fields from API (support snake_case and camelCase)
-        const normalized: Project = {
-          id: data.id || id,
-          title: data.title || data.details?.title || 'Untitled Project',
-          description: data.description || data.details?.description || '',
-          author: data.author || data.details?.author || '',
-          audience: data.audience || data.details?.audience || '',
-          rss_url: data.rss_url || data.content?.rssFeed || '',
-          status: (data.status || 'draft') as Project['status'],
-          created_at: data.created_at || data.createdAt || new Date().toISOString(),
-          pages_count: Number(data.targetPages ?? 50),
-          chapters_count: Number(data.targetChapters ?? 11),
-          word_count: Number(data.targetPages * 250 || 20000),
-          file_size: data.file_size || data.fileSize || '—',
-          format: data.format || data.specs?.format || 'PDF',
-          estimated_cost: Number(data.estimatedCost ?? 0),
-          chapters: (data.chapters || []).map((ch: any, idx: number) => ({
-            id: ch.id?.toString() || String(idx + 1),
-            title: ch.title || `Chapter ${idx + 1}`,
-            description: ch.description || '',
-            wordCount: Number(ch.wordCount ?? 0),
-            estimatedPages: Number(ch.estimatedPages ?? 0),
-          })),
-          type: data.type || data.bookType || data.details?.type,
-          uploads: data.uploads || [],
-        };
-        if (isMounted) {
-          setProject(normalized);
-          setLoading(false);
-        }
-      } catch (e) {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-    setLoading(true);
-    fetchProject();
-    return () => { isMounted = false; };
-  }, [id]);
-
-  // Auto-show modals when page loads in specific states
-  useEffect(() => {
-    if (project?.status === 'PROCESSING') {
-      setShowOrderPlacedModal(true);
-    } else if (project?.status === 'COMPLETED') {
-      setShowOrderCompletedModal(true);
-    }
-  }, [project?.status]);
-
-  // Modal handlers
-  const handleDownload = () => {
-    setShowDownloadModal(true);
-  };
-
-  const handleContactSupport = () => {
-    setShowContactSupportModal(true);
-  };
-
-  const handleViewBook = () => {
-    navigate('/book-review/demo-book-id');
-  };
-
-  const confirmDownload = () => {
-    // TODO: Implement actual download logic
-    setShowDownloadModal(false);
-    // Simulate download
-    const link = document.createElement('a');
-    link.href = 'data:text/plain;charset=utf-8,Your book content here';
-    link.download = `${project?.title || 'book'}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="flex">
-          <LeftNavigation activePage="project-detail" />
-          {/* Main Content Area */}
-          <main className="flex-1 p-8">
-            <div className="text-center py-12">
-              <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground">Loading project details...</p>
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
-
-  // If editing, show the AI text editor
-  if (isEditing) {
-    return (
-      <div className="min-h-screen bg-background">
-        <AITextEditor projectId={project?.id || ''} projectTitle={project?.title || ''} />
-      </div>
-    );
-  }
-
-  if (!project) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="flex">
-          <LeftNavigation activePage="project-detail" />
-          {/* Main Content Area */}
-          <main className="flex-1 p-8">
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Project not found</p>
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
-
-  // If draft, show BookOverview using project info
-  if (project.status === 'DRAFT') {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="flex">
-          <LeftNavigation activePage="project-detail" />
-          <main className="flex-1 p-8">
-            <div className="max-w-6xl mx-auto">
-              <div className="mb-8">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-3xl font-medium text-foreground mb-2">{project.title}</h1>
-                    <p className="text-lg text-muted-foreground max-w-3xl">{project.description}</p>
-                  </div>
-                  <Badge variant="secondary">Draft</Badge>
-                </div>
-              </div>
-
-              <BookOverview
-                preview={{
-                  totalWords: project.word_count || 0,
-                  totalPages: project.pages_count || 0,
-                  estimatedCost: project.estimated_cost || 0,
-                }}
-                selectedBookType={project.type || 'non-fiction'}
-                bookSpecs={{ targetPages: [project.pages_count || 150], targetChapters: [project.chapters_count || 10], format: project.format || 'pdf' }}
-                contentSources={{ 
-                  rssFeed: project.rss_url || '', 
-                  uploadedFiles: (project.uploads || []).map(upload => ({
-                    name: upload.filename,
-                    size: upload.size, // duration in seconds
-                    type: upload.contentType,
-                    source: upload.source,
-                  })),
-                  textContent: '', 
-                  urls: [] 
-                }}
-                processing={false}
-                processingProgress={0}
-                onPurchase={async (calculatedPrice: number) => {
-                  try {
-                    // Update project status to PROCESSING and save the calculated price
-                    await projectAPI.completeProject(project.id, {
-                      status: 'PROCESSING',
-                      processingStartedAt: new Date().toISOString(),
-                      estimatedCost: calculatedPrice,
-                    } as any);
-
-                    const orderId = 'order-' + Date.now();
-                    const orderData = {
-                      id: orderId,
-                      projectId: project.id,
-                      bookTitle: project.title,
-                      bookType: project.type || 'non-fiction',
-                      targetPages: project.pages_count || 150,
-                      pricing: {
-                        subtotal: calculatedPrice - 0.20, // Subtract processing fee to get subtotal
-                        processingFee: 0.20,
-                        total: calculatedPrice,
-                      },
-                    } as any;
-                    localStorage.setItem('currentOrder', JSON.stringify(orderData));
-                    navigate(`/order-processing/${orderId}`);
-                  } catch (error) {
-                    console.error('Failed to update project status:', error);
-                    // Still proceed with order creation even if status update fails
-                    const orderId = 'order-' + Date.now();
-                    const orderData = {
-                      id: orderId,
-                      projectId: project.id,
-                      bookTitle: project.title,
-                      bookType: project.type || 'non-fiction',
-                      targetPages: project.pages_count || 150,
-                      pricing: {
-                        subtotal: calculatedPrice - 0.20,
-                        processingFee: 0.20,
-                        total: calculatedPrice,
-                      },
-                    } as any;
-                    localStorage.setItem('currentOrder', JSON.stringify(orderData));
-                    navigate(`/order-processing/${orderId}`);
-                  }
-                }}
-              />
-
-              {/* Pass through projectId if needed by nested components */}
-              <div className="mt-6 text-sm text-muted-foreground">Project ID: {project.id}</div>
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
+  const getStateConfig = () => states.find(s => s.value === currentState)!;
 
   const getStepTitle = (step: string) => {
     switch (step) {
@@ -324,44 +70,84 @@ const ProjectDetail = () => {
     }
   };
 
-  const renderBookInfo = (status: string) => {
+  // Modal handlers
+  const handleDownload = () => {
+    setShowDownloadModal(true);
+  };
+
+  const handleContactSupport = () => {
+    setShowRefundModal(true);
+  };
+
+  const handleViewBook = () => {
+    navigate('/book-review/demo-book-id');
+  };
+
+  const confirmDownload = () => {
+    // TODO: Implement actual download logic
+    setShowDownloadModal(false);
+    // Simulate download
+    const link = document.createElement('a');
+    link.href = 'data:text/plain;charset=utf-8,Your book content here';
+    link.download = `tech-news-weekly-digest.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Auto-show modals when page loads in specific states
+  React.useEffect(() => {
+    if (currentState === 'processing') {
+      setShowOrderPlacedModal(true);
+    } else if (currentState === 'completed') {
+      setShowOrderCompletedModal(true);
+    }
+  }, [currentState]);
+
+  const renderBookInfo = (state: BookState) => {
+    const config = getStateConfig();
+    const colorMap = {
+      processing: 'primary',
+      'under-review': 'muted',
+      'post-approval': 'primary',
+      completed: 'primary'
+    };
+
     const metrics = {
       processing: [
-        { value: project.pages_count.toString(), label: 'Target Pages' },
-        { value: project.chapters_count.toString(), label: 'Chapters' },
-        { value: `$${project.estimated_cost}`, label: 'Total Cost' },
+        { value: '150', label: 'Target Pages' },
+        { value: '8', label: 'Chapters' },
+        { value: '$25', label: 'Total Cost' },
         { value: '4', label: 'Days Left' }
       ],
       'under-review': [
-        { value: project.pages_count.toString(), label: 'Pages' },
-        { value: `${(project.word_count / 1000).toFixed(1)}K`, label: 'Words' },
-        { value: project.chapters_count.toString(), label: 'Chapters' },
+        { value: '124', label: 'Pages' },
+        { value: '45.6K', label: 'Words' },
+        { value: '8', label: 'Chapters' },
         { value: '2-3', label: 'Days Left' }
       ],
       'post-approval': [
-        { value: project.pages_count.toString(), label: 'Pages' },
-        { value: `${(project.word_count / 1000).toFixed(1)}K`, label: 'Words' },
-        { value: project.chapters_count.toString(), label: 'Chapters' },
-        { value: project.format, label: 'Format' }
+        { value: '124', label: 'Pages' },
+        { value: '45.6K', label: 'Words' },
+        { value: '8', label: 'Chapters' },
+        { value: 'PDF', label: 'Format' }
       ],
       completed: [
-        { value: project.pages_count.toString(), label: 'Pages' },
-        { value: `${(project.word_count / 1000).toFixed(1)}K`, label: 'Words' },
-        { value: project.chapters_count.toString(), label: 'Chapters' },
-        { value: project.file_size, label: 'File Size' }
+        { value: '124', label: 'Pages' },
+        { value: '45.6K', label: 'Words' },
+        { value: '8', label: 'Chapters' },
+        { value: '2.3MB', label: 'File Size' }
       ]
     };
-
-    const currentMetrics = metrics[status as keyof typeof metrics] || metrics.completed;
 
     return (
       <div className="space-y-16">
         <div>
-          <h2 className="text-4xl font-bold text-foreground mb-8">{project.title}</h2>
-          <p className="text-muted-foreground mb-16">{project.description}</p>
+          <h2 className="text-4xl font-bold text-foreground mb-8">Tech News Weekly Digest</h2>
+          <p className="text-muted-foreground mb-16">A comprehensive compilation of the latest technology news and insights from leading industry sources, curated and organized into a structured book format.</p>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
-            {currentMetrics.map((metric, index) => (
+            {metrics[state].map((metric, index) => (
               <div key={index} className="text-center">
                 <div className="text-2xl font-bold text-foreground">{metric.value}</div>
                 <div className="text-sm text-muted-foreground">{metric.label}</div>
@@ -370,7 +156,7 @@ const ProjectDetail = () => {
           </div>
         </div>
 
-        {status === 'processing' && (
+        {state === 'processing' && (
           <Card>
             <CardHeader>
               <CardTitle>Processing Steps</CardTitle>
@@ -399,7 +185,7 @@ const ProjectDetail = () => {
         )}
 
         {/* Human Review Notice - Only show for processing state */}
-        {status === 'processing' && (
+        {currentState === 'processing' && (
           <Card className="border-border bg-muted/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-foreground">
@@ -423,7 +209,7 @@ const ProjectDetail = () => {
         )}
 
         {/* Support Card - Only show for processing state */}
-        {status === 'processing' && (
+        {currentState === 'processing' && (
           <Card className="border-green-200 bg-green-50">
             <CardHeader>
               <CardTitle className="text-green-800">Have questions about your order?</CardTitle>
@@ -443,7 +229,7 @@ const ProjectDetail = () => {
           </Card>
         )}
 
-        {status === 'under-review' && (
+        {state === 'under-review' && (
           <>
             {/* Action Bar */}
             <Card>
@@ -489,7 +275,7 @@ const ProjectDetail = () => {
           </>
         )}
 
-        {status === 'post-approval' && (
+        {state === 'post-approval' && (
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-wrap gap-3">
@@ -511,7 +297,7 @@ const ProjectDetail = () => {
           </Card>
         )}
 
-        {status === 'completed' && (
+        {state === 'completed' && (
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-wrap gap-3">
@@ -534,7 +320,7 @@ const ProjectDetail = () => {
         )}
 
         {/* Refund Policy Notice - Only show for completed state */}
-        {status === 'completed' && (
+        {state === 'completed' && (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 mb-3">
@@ -550,26 +336,16 @@ const ProjectDetail = () => {
             </CardContent>
           </Card>
         )}
+
+
       </div>
     );
   };
 
-  // Map project status to landing page status
-  const getLandingPageStatus = (status: string) => {
-    switch (status) {
-      case 'PROCESSING': return 'processing';
-      case 'COMPLETED': return 'completed';
-      case 'FAILED': return 'under-review';
-      default: return 'completed';
-    }
-  };
-
-  const currentStatus = getLandingPageStatus(project.status);
-
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Navigation */}
-      <LeftNavigation activePage="project-detail" />
+      <LeftNavigation />
       
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
@@ -587,24 +363,26 @@ const ProjectDetail = () => {
         {/* Main Content */}
         <main className="flex-1 p-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-            {/* Book Cover Section */}
-            <div className="lg:col-span-1">
-              <Book3D 
-                pageCount={project.pages_count}
-                title={project.title}
-                author={`by ${project.author}`}
-              />
-            </div>
+                          {/* Book Cover Section */}
+              <div className="lg:col-span-1">
+                <Book3D 
+                  pageCount={124}
+                  title="Tech News Weekly Digest"
+                  author="by John Doe"
+                />
+              </div>
 
             {/* Book Info Section */}
             <div className="lg:col-span-2">
-              {renderBookInfo(currentStatus)}
+              {renderBookInfo(currentState)}
             </div>
           </div>
+
+
         </main>
 
         {/* Chapters Component for Completed, Under Review, and Post Approval States */}
-        {(currentStatus === 'completed' || currentStatus === 'under-review' || currentStatus === 'post-approval') && (
+        {(currentState === 'completed' || currentState === 'under-review' || currentState === 'post-approval') && (
           <div className="px-8 pb-8 mt-16">
             <Card>
               <CardHeader>
@@ -612,11 +390,21 @@ const ProjectDetail = () => {
                   <div>
                     <CardTitle className="text-lg">Content Overview</CardTitle>
                   </div>
+
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3">
-                  {(project.chapters || []).map((chapter, index) => (
+                  {[
+                    { id: '1', title: 'Introduction to Tech Trends', description: 'Overview of current technology landscape', wordCount: 1200, estimatedPages: 4 },
+                    { id: '2', title: 'Artificial Intelligence Breakthroughs', description: 'Latest developments in AI and machine learning', wordCount: 1800, estimatedPages: 6 },
+                    { id: '3', title: 'Cloud Computing Evolution', description: 'Advances in cloud infrastructure and services', wordCount: 2400, estimatedPages: 8 },
+                    { id: '4', title: 'Cybersecurity Updates', description: 'New threats and protection strategies', wordCount: 2000, estimatedPages: 7 },
+                    { id: '5', title: 'Mobile Technology Trends', description: 'Innovations in mobile devices and apps', wordCount: 1600, estimatedPages: 6 },
+                    { id: '6', title: 'Blockchain Developments', description: 'Cryptocurrency and blockchain technology updates', wordCount: 1400, estimatedPages: 5 },
+                    { id: '7', title: 'Internet of Things', description: 'Connected devices and smart technology', wordCount: 1200, estimatedPages: 4 },
+                    { id: '8', title: 'Future Outlook', description: 'Predictions and emerging technologies', wordCount: 800, estimatedPages: 3 },
+                  ].map((chapter, index) => (
                     <div 
                       key={chapter.id} 
                       className="group relative p-4 border rounded-lg hover:bg-muted/30 hover:border-muted-foreground/30 transition-all duration-200 cursor-pointer"
@@ -650,10 +438,31 @@ const ProjectDetail = () => {
                     </div>
                   ))}
                 </div>
+                
+
               </CardContent>
             </Card>
           </div>
         )}
+
+        {/* Discreet State Toggle at Bottom */}
+        <div className="border-t bg-card px-6 py-4 flex items-center justify-center mt-16">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">View State:</span>
+            <Select value={currentState} onValueChange={(value: BookState) => setCurrentState(value)}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select a state" />
+              </SelectTrigger>
+              <SelectContent>
+                {states.map((stateConfig) => (
+                  <SelectItem key={stateConfig.value} value={stateConfig.value}>
+                    {stateConfig.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         {/* Download Confirmation Modal */}
         {showDownloadModal && (
@@ -775,7 +584,7 @@ const ProjectDetail = () => {
               {/* Book content preview */}
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold mb-4 text-foreground">
-                  {project.title}
+                  Tech News Weekly Digest
                 </h2>
                 <p className="text-muted-foreground mb-6">
                   Preview your book content before downloading
@@ -784,7 +593,16 @@ const ProjectDetail = () => {
               
               {/* Book chapters preview */}
               <div className="space-y-4 mb-6">
-                {(project.chapters || []).map((chapter, index) => (
+                {[
+                  { id: '1', title: 'Introduction to Tech Trends', description: 'Overview of current technology landscape', wordCount: 1200, estimatedPages: 4 },
+                  { id: '2', title: 'Artificial Intelligence Breakthroughs', description: 'Latest developments in AI and machine learning', wordCount: 1800, estimatedPages: 6 },
+                  { id: '3', title: 'Cloud Computing Evolution', description: 'Advances in cloud infrastructure and services', wordCount: 2400, estimatedPages: 8 },
+                  { id: '4', title: 'Cybersecurity Updates', description: 'New threats and protection strategies', wordCount: 2000, estimatedPages: 7 },
+                  { id: '5', title: 'Mobile Technology Trends', description: 'Innovations in mobile devices and apps', wordCount: 1600, estimatedPages: 6 },
+                  { id: '6', title: 'Blockchain Developments', description: 'Cryptocurrency and blockchain technology updates', wordCount: 1400, estimatedPages: 5 },
+                  { id: '7', title: 'Internet of Things', description: 'Connected devices and smart technology', wordCount: 1200, estimatedPages: 4 },
+                  { id: '8', title: 'Future Outlook', description: 'Predictions and emerging technologies', wordCount: 800, estimatedPages: 3 },
+                ].map((chapter, index) => (
                   <div 
                     key={chapter.id} 
                     className="p-4 border rounded-lg hover:bg-muted/30 transition-all duration-200"
@@ -928,10 +746,24 @@ const ProjectDetail = () => {
             </div>
           </div>
         )}
+
+        {/* Refund Request Modal */}
+        <RefundRequestModal
+          isOpen={showRefundModal}
+          onClose={() => setShowRefundModal(false)}
+          bookTitle="Tech News Weekly Digest"
+          orderId="demo-order-123"
+          onSubmit={(data) => {
+            // TODO: Implement refund/modification request submission
+            console.log(`${data.requestType} request submitted:`, data);
+            setShowRefundModal(false);
+            // Show success message or redirect
+            alert(`${data.requestType === 'modification' ? 'Modification' : 'Refund'} request submitted successfully! We'll contact you within 24-48 hours.`);
+          }}
+        />
       </div>
     </div>
   );
 };
 
-export default ProjectDetail;
-
+export default BookLandingPageVariations;

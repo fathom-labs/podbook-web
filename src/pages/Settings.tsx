@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/contexts/ThemeContext';
+import Logo from '@/components/Logo';
 import { 
   User, 
   CreditCard, 
@@ -152,10 +153,7 @@ const Settings = () => {
       <aside className="w-64 bg-card border-r border-border flex flex-col">
         {/* Logo */}
         <div className="p-6">
-          <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="Podbook Logo" className="w-8 h-8 logo-svg" />
-            <h1 className="text-2xl font-medium text-foreground">Podbook</h1>
-          </div>
+          <Logo size="md" showText={true} textSize="2xl" />
         </div>
 
         {/* Back to Dashboard Button */}
