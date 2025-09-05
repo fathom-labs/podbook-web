@@ -12,21 +12,31 @@ const Onboarding: React.FC = () => {
   const handleComplete = async (data: OnboardingData) => {
     try {
       // Complete onboarding
-      completeOnboarding(data);
+      await completeOnboarding(data);
       console.log('Onboarding completed:', data);
+      // Navigate after completion
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error completing onboarding:', error);
     }
   };
 
-  const handleStartBook = () => {
-    completeOnboarding(onboardingData || {} as OnboardingData);
-    navigate('/new-project');
+  const handleStartBook = async () => {
+    try {
+      await completeOnboarding(onboardingData || {} as OnboardingData);
+      navigate('/new-project');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    }
   };
 
-  const handleGoToDashboard = () => {
-    completeOnboarding(onboardingData || {} as OnboardingData);
-    navigate('/dashboard');
+  const handleGoToDashboard = async () => {
+    try {
+      await completeOnboarding(onboardingData || {} as OnboardingData);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    }
   };
 
   const handleScheduleCall = () => {
@@ -34,16 +44,24 @@ const Onboarding: React.FC = () => {
     window.open('https://calendly.com/podbook', '_blank');
   };
 
-  const handleScheduleCallAndNavigate = () => {
-    // Complete onboarding first, then open Calendly link in new tab AND navigate to dashboard
-    completeOnboarding(onboardingData || {} as OnboardingData);
-    window.open('https://calendly.com/podbook', '_blank');
-    navigate('/dashboard');
+  const handleScheduleCallAndNavigate = async () => {
+    try {
+      // Complete onboarding first, then open Calendly link in new tab AND navigate to dashboard
+      await completeOnboarding(onboardingData || {} as OnboardingData);
+      window.open('https://calendly.com/podbook', '_blank');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    }
   };
 
-  const handleSkip = () => {
-    skipOnboarding();
-    navigate('/dashboard');
+  const handleSkip = async () => {
+    try {
+      await skipOnboarding();
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error skipping onboarding:', error);
+    }
   };
 
   // If user is not authenticated, redirect to login

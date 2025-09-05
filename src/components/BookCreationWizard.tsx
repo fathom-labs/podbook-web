@@ -31,6 +31,7 @@ import {
   Info
 } from "lucide-react";
 import { projectAPI, rssAPI, uploadsAPI } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BookType {
   id: string;
@@ -84,6 +85,7 @@ const bookTypes: BookType[] = [
 
 const BookCreationWizard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedBookType, setSelectedBookType] = useState<string>('');
   const [bookDetails, setBookDetails] = useState({
@@ -123,6 +125,40 @@ const BookCreationWizard = () => {
     });
   };
 
+  // Helper function to create project only when needed
+  const ensureProjectExists = async (): Promise<string | null> => {
+    if (projectId) {
+      return projectId;
+    }
+
+    try {
+      const payload = {
+        type: selectedBookType || undefined,
+        details: bookDetails,
+        specs: bookSpecs,
+        content: {
+          rssFeed: contentSources.rssFeed,
+          uploadedFiles: contentSources.uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+          textContent: contentSources.textContent,
+          urls: contentSources.urls,
+          selectedEpisodes: Array.from(selectedEpisodes),
+        },
+        step: currentStep,
+      } as any;
+      
+      const resp = await projectAPI.saveProject(payload);
+      const savedId = resp?.data?.id || resp?.id;
+      if (savedId) {
+        setProjectId(savedId);
+        return savedId;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (currentStep > 1) {
       setShowChangesSaved(true);
@@ -133,8 +169,13 @@ const BookCreationWizard = () => {
     }
   }, [currentStep]);
 
-  // Debounced autosave when relevant state changes
+  // Only autosave after step 3 (when user has provided meaningful content)
   useEffect(() => {
+    // Only start autosaving after step 3 or when user has uploaded files
+    if (currentStep < 3 && contentSources.uploadedFiles.length === 0) {
+      return;
+    }
+
     if (autosaveTimerRef.current) {
       window.clearTimeout(autosaveTimerRef.current);
     }
@@ -179,65 +220,51 @@ const BookCreationWizard = () => {
   ];
 
   const handleNext = async () => {
-    if (currentStep === 4 && ( selectedEpisodes.size > 0 || contentSources.uploadedFiles.length > 0)) {
+    // Only create project and proceed to project detail when user has content
+    if (currentStep === 4 && (selectedEpisodes.size > 0 || contentSources.uploadedFiles.length > 0)) {
       try {
         const episodesToSave = Array.from(selectedEpisodes).map((idx) => rssEpisodes[idx]).filter(Boolean);
-        // Ensure we have a projectId; trigger save if needed
-        if (!projectId) {
-          const saveResp = await projectAPI.saveProject({
-            type: selectedBookType || undefined,
-            details: bookDetails,
-            specs: bookSpecs,
-            content: { ...contentSources, selectedEpisodes: Array.from(selectedEpisodes) },
-            step: currentStep,
-          } as any);
-          const savedId = saveResp?.data?.id || saveResp?.id;
-          if (savedId) setProjectId(savedId);
-        }
-        const effectiveProjectId = projectId || (await (async () => {
-          const saveResp = await projectAPI.saveProject({
-            type: selectedBookType || undefined,
-            details: bookDetails,
-            specs: bookSpecs,
-            content: { ...contentSources, selectedEpisodes: Array.from(selectedEpisodes) },
-            step: currentStep,
-          } as any);
-          return saveResp?.data?.id || saveResp?.id;
-        })());
-
-        if (effectiveProjectId) {
-          if (selectedEpisodes.size > 0) {
-            await uploadsAPI.saveRssEpisodes({
-              projectId: effectiveProjectId,
-              episodes: episodesToSave as any,
-            });
-          }
-          // Save any direct-uploaded files as uploads too
-          const uploadedFiles = contentSources.uploadedFiles
-            .filter(f => f.podiumPackageId) // Only include successfully uploaded files
-            .map(f => ({
-              filename: f.name,
-              url: f.podiumPackageId, // You might need to construct this from your storage URL and package ID
-              size: f.duration || 0, // Store duration instead of file size for cost calculation
-              contentType: f.type,
-              duration: f.duration
-            }));
-
-            console.log('Uploaded files:', uploadedFiles);
-
-          if (uploadedFiles.length > 0) {
-            console.log('Saving uploaded files:', uploadedFiles);
-            await uploadsAPI.saveUploadedFiles({ 
-              projectId: effectiveProjectId, 
-              files: uploadedFiles 
-            });
-          }
-
-          // After saving, navigate to project detail page
-          navigate(`/projects/${effectiveProjectId}`);
+        
+        // Create project only when user has meaningful content
+        const effectiveProjectId = await ensureProjectExists();
+        if (!effectiveProjectId) {
+          console.error('Failed to create project');
           return;
         }
+
+        if (selectedEpisodes.size > 0) {
+          await uploadsAPI.saveRssEpisodes({
+            projectId: effectiveProjectId,
+            episodes: episodesToSave as any,
+          });
+        }
+        
+        // Save any direct-uploaded files as uploads too
+        const uploadedFiles = contentSources.uploadedFiles
+          .filter(f => f.podiumPackageId) // Only include successfully uploaded files
+          .map(f => ({
+            filename: f.name,
+            url: f.podiumPackageId, // You might need to construct this from your storage URL and package ID
+            size: f.duration || 0, // Store duration instead of file size for cost calculation
+            contentType: f.type,
+            duration: f.duration
+          }));
+
+        console.log('Uploaded files:', uploadedFiles);
+
+        if (uploadedFiles.length > 0) {
+          console.log('Saving uploaded files:', uploadedFiles);
+          await uploadsAPI.saveUploadedFiles({ 
+            projectId: effectiveProjectId, 
+            files: uploadedFiles 
+          });
+        }
+
+        // After saving, navigate to project detail page
+        navigate(`/projects/${effectiveProjectId}`);
+        return;
       } catch (e) {
+        console.error('Error saving project content:', e);
         // Even if saving uploads fails, attempt navigation to project page if we have an id
         if (projectId) {
           navigate(`/projects/${projectId}`);
@@ -245,6 +272,8 @@ const BookCreationWizard = () => {
         }
       }
     }
+    
+    // For steps 1-3, just move to next step without creating project
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -299,19 +328,13 @@ const BookCreationWizard = () => {
     if (!files) return;
     
     const list = Array.from(files);
-    const effectiveProjectId = projectId || (await (async () => {
-      const saveResp = await projectAPI.saveProject({
-        type: selectedBookType || undefined,
-        details: bookDetails,
-        specs: bookSpecs,
-        content: contentSources,
-        step: currentStep,
-      } as any);
-      const savedId = saveResp?.data?.id || saveResp?.id;
-      if (savedId && !projectId) setProjectId(savedId);
-      return savedId;
-    })());
-    if (!effectiveProjectId) return;
+    
+    // Create project only when user starts uploading files
+    const effectiveProjectId = await ensureProjectExists();
+    if (!effectiveProjectId) {
+      console.error('Failed to create project for file upload');
+      return;
+    }
   
     const newUploadingFiles: UploadingFile[] = list.map(file => ({
       file,
@@ -339,7 +362,7 @@ const BookCreationWizard = () => {
         // 1. Get upload credentials from GraphQL
         const { data } = await createPodiumPackage({
           variables: {
-            userEmail: 'test123test020@podium.page', // Make sure you have access to the user object
+            userEmail: user?.email || '', // Use actual user email from auth context
             originalFilename: file.name,
             projectId: null,
             languageCode: 'en', // Set appropriate language
@@ -676,8 +699,13 @@ const BookCreationWizard = () => {
   const renderStep4 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-                    <h2 className="text-3xl font-medium text-foreground mb-2">Add Your Content</h2>
+        <h2 className="text-3xl font-medium text-foreground mb-2">Add Your Content</h2>
         <p className="text-muted-foreground">Choose how you want to provide content for your book</p>
+        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+          <p className="text-sm text-amber-800">
+            <strong>Important:</strong> You must add at least one content source (RSS feed episodes or uploaded files) to create your project.
+          </p>
+        </div>
       </div>
       
       <div className="max-w-4xl mx-auto space-y-6">
@@ -929,11 +957,12 @@ const BookCreationWizard = () => {
             onClick={handleNext}
             disabled={
               (currentStep === 1 && !selectedBookType) ||
-              (currentStep === 2 && (!bookDetails.title || !bookDetails.description))
+              (currentStep === 2 && (!bookDetails.title || !bookDetails.description)) ||
+              (currentStep === 4 && selectedEpisodes.size === 0 && contentSources.uploadedFiles.length === 0)
             }
             className="bg-primary hover:bg-primary/90"
           >
-            Next
+            {currentStep === 4 ? 'Create Project' : 'Next'}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

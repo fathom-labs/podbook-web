@@ -32,6 +32,7 @@ import AIEditor from "./pages/AIEditor";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import BookLandingPageVariations from "./pages/BookLandingPageVariations";
+import FilePrep from "./pages/FilePrep";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,11 @@ const App = () => (
               <Route path="/settings" element={
                 <OnboardingGuard>
                   <Settings />
+                </OnboardingGuard>
+              } />
+              <Route path="/file-prep" element={
+                <OnboardingGuard>
+                  <FilePrep />
                 </OnboardingGuard>
               } />
               <Route path="/onboarding" element={<Onboarding />} />

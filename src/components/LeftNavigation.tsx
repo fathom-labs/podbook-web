@@ -74,7 +74,7 @@ const LeftNavigation = ({ activePage = 'dashboard' }: LeftNavigationProps) => {
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* Quick Actions
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">
               Quick Actions
@@ -97,7 +97,7 @@ const LeftNavigation = ({ activePage = 'dashboard' }: LeftNavigationProps) => {
                 </Link>
               </Button>
             </div>
-          </div>
+          </div>*/}
         </nav>
       </div>
 

@@ -4,7 +4,7 @@ import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 
 const httpLink = createHttpLink({
-  uri: 'https://dev-api.fathom.fm/graphql'
+  uri: import.meta.env.VITE_GRAPHQL_API_URL || 'https://dev-api.fathom.fm/graphql'
 });
 
 // Error handling link
@@ -23,8 +23,12 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 
 // Auth link with better token handling
 const authLink = setContext((_, { headers }) => {
-    // Get the token from localStorage or your auth context
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwb2RpdW1fdXNlcl9ndWlkIjoiMzZjMTU5MzYtODJmMi00OThhLWFhMTktMTdmNDZhMjhlODYzIn0.fKe_S4oiljArr9BfGT7IGczOUmIAjEq_eCgi37IRrCA';
+    // Get the token from environment variables
+    const token = import.meta.env.VITE_PODIUM_API_TOKEN;
+    
+    if (!token) {
+      console.warn('VITE_PODIUM_API_TOKEN is not set in environment variables');
+    }
     
     // Ensure the token is properly formatted
     const authHeader = token ? { 

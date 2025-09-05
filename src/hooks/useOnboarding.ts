@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 export interface OnboardingData {
   writingExperience: string;
@@ -22,16 +22,34 @@ export const useOnboarding = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Temporarily disabled onboarding check while backend connection issues are resolved
-    // if (user) {
-    //   checkOnboardingStatus();
-    // } else {
-    //   setIsLoading(false);
-    // }
+    // Check localStorage first for onboarding completion status
+    const storedCompletion = localStorage.getItem('onboardingComplete');
+    const storedData = localStorage.getItem('onboardingData');
     
-    // Set default values to prevent blocking
-    setIsOnboardingComplete(true);
-    setIsLoading(false);
+    if (storedCompletion === 'true') {
+      setIsOnboardingComplete(true);
+      if (storedData) {
+        try {
+          setOnboardingData(JSON.parse(storedData));
+        } catch (error) {
+          console.error('Error parsing stored onboarding data:', error);
+        }
+      }
+      setIsLoading(false);
+      return;
+    }
+    
+    // If no stored completion status, check if user is authenticated
+    if (user) {
+      // Temporarily disabled onboarding check while backend connection issues are resolved
+      // checkOnboardingStatus();
+      
+      // For now, assume onboarding is not complete if no localStorage data
+      setIsOnboardingComplete(false);
+      setIsLoading(false);
+    } else {
+      setIsLoading(false);
+    }
   }, [user]);
 
   const checkOnboardingStatus = async () => {
@@ -88,6 +106,11 @@ export const useOnboarding = () => {
     console.log('Onboarding completion disabled - setting local state only');
     setOnboardingData(data);
     setIsOnboardingComplete(true);
+    
+    // Store in localStorage to persist across page refreshes
+    localStorage.setItem('onboardingComplete', 'true');
+    localStorage.setItem('onboardingData', JSON.stringify(data));
+    
     return { data, success: true };
     
     // Original code commented out:
@@ -153,6 +176,10 @@ export const useOnboarding = () => {
     // Temporarily disabled while backend connection issues are resolved
     console.log('Onboarding skip disabled - setting local state only');
     setIsOnboardingComplete(true);
+    
+    // Store in localStorage to persist across page refreshes
+    localStorage.setItem('onboardingComplete', 'true');
+    localStorage.removeItem('onboardingData'); // Clear any partial data
     
     // Original code commented out:
     /*

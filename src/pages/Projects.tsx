@@ -156,13 +156,13 @@ const Projects = () => {
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {!loading && filteredProjects.map((project) => (
             <BookCard key={project.id} project={{
               id: project.id,
               title: project.title,
               // Map extra statuses to nearest supported ones used by BookCard
-              status: (project.status === 'draft' ? 'processing' : project.status === 'archived' ? 'failed' : project.status) as 'processing' | 'completed' | 'failed',
+              status: (project.status === 'draft' ? 'draft' : project.status === 'failed' ? 'failed' : project.status) as 'processing' | 'completed' | 'failed',
               edited_at: project.edited_at,
               word_count: project.word_count,
               pages_count: project.pages_count,

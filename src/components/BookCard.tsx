@@ -7,7 +7,7 @@ interface BookCardProps {
   project: {
     id: string;
     title: string;
-    status: 'processing' | 'completed' | 'failed';
+    status: 'processing' | 'completed' | 'failed' | 'draft';
     edited_at?: string;
     word_count?: number;
     pages_count?: number;
@@ -19,6 +19,7 @@ const BookCard = ({ project, showActions = true }: BookCardProps) => {
   const navigate = useNavigate();
   const isCompleted = project.status === 'completed';
   const isProcessing = project.status === 'processing';
+  const isDraft = project.status === 'draft';
   const isFailed = project.status === 'failed';
 
   const handleCardClick = () => {
@@ -63,12 +64,8 @@ const BookCard = ({ project, showActions = true }: BookCardProps) => {
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           {/* View Button - Always enabled */}
           <Button variant="outline" size="sm" className="flex-1" asChild>
-            <Link to={
-              project.id === 'order-demo' 
-                ? `/order-processing/${project.id}` 
-                : (isProcessing || isFailed ? `/book-landing-variations?state=processing` : 
-                   isCompleted ? `/book-landing-variations?state=completed` : `/book-landing-variations?state=processing`)
-            }>
+            <Link to={ `/projects/${project.id}`}
+            >
               <Eye className="h-4 w-4 mr-2" />
               View
             </Link>
@@ -77,7 +74,7 @@ const BookCard = ({ project, showActions = true }: BookCardProps) => {
           {/* Failed State: View + Retry */}
           {isFailed && (
             <Button variant="outline" size="sm" className="flex-1" asChild>
-              <Link to={`/book-landing-variations?state=processing`}>
+              <Link to={`/processing/${project.id}`}>
                 <Clock className="h-4 w-4 mr-2" />
                 Retry
               </Link>
@@ -87,10 +84,10 @@ const BookCard = ({ project, showActions = true }: BookCardProps) => {
           {/* Processing State: View + Edit (ghosted) + Download (ghosted) */}
           {isProcessing && (
             <>
-              <Button variant="outline" size="sm" className="flex-1" disabled>
+              {/*<Button variant="outline" size="sm" className="flex-1" disabled>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
-              </Button>
+              </Button>*/}
               <Button variant="outline" size="sm" className="flex-1" disabled>
                 <Download className="h-4 w-4 mr-2" />
                 Download
@@ -101,12 +98,12 @@ const BookCard = ({ project, showActions = true }: BookCardProps) => {
           {/* Completed State: View + Edit + Download */}
           {isCompleted && (
             <>
-              <Button variant="outline" size="sm" className="flex-1" asChild>
-                <Link to={`/book-landing-variations?state=completed`}>
+              {/*<Button variant="outline" size="sm" className="flex-1" asChild>
+                <Link to={`/projects/${project.id}`}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Link>
-              </Button>
+              </Button>*/}
               <Button variant="outline" size="sm" className="flex-1">
                 <Download className="h-4 w-4 mr-2" />
                 Download

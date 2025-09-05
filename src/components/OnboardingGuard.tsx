@@ -43,11 +43,13 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({
 
   // Only redirect to onboarding if we're certain onboarding is not complete
   if (isOnboardingComplete === false) {
-    console.log('redirecting to onboarding');
+    console.log('redirecting to onboarding - onboarding not complete');
     return <Navigate to={redirectTo} replace />;
   }
 
-  // If onboarding is complete or status is unknown, render the protected content
+  // If onboarding is complete (true) or status is unknown (null), render the protected content
+  // This allows navigation to proceed when onboarding is marked as complete
+  console.log('onboarding status:', isOnboardingComplete, 'rendering protected content');
   return <>{children}</>;
 };
 
