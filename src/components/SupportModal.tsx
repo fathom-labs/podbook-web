@@ -53,7 +53,7 @@ const SupportModal = ({ isOpen, onClose, pageUrl, userEmail }: SupportModalProps
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/support`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/support`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
