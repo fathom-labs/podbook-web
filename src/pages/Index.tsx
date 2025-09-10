@@ -1,21 +1,31 @@
-import Header from "@/components/Header";
-import HeroSection from "@/components/HeroSection";
-import HowItWorks from "@/components/HowItWorks";
-import Features from "@/components/Features";
-import RSSFeedInput from "@/components/RSSFeedInput";
-import Footer from "@/components/Footer";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        // User is logged in, redirect to dashboard
+        navigate("/dashboard", { replace: true });
+      } else {
+        // User is not logged in, redirect to login
+        navigate("/login", { replace: true });
+      }
+    }
+  }, [user, loading, navigate]);
+
+  // Show loading spinner while checking authentication
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main>
-        <HeroSection />
-        <HowItWorks />
-        <Features />
-        <RSSFeedInput />
-      </main>
-      <Footer />
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
     </div>
   );
 };
