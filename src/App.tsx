@@ -33,6 +33,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import BookLandingPageVariations from "./pages/BookLandingPageVariations";
 import FilePrep from "./pages/FilePrep";
+import ChatBubble from "./components/ChatBubble";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <ChatBubble />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

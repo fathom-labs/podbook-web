@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import AITextEditor from "@/components/AITextEditor";
+import SupportModal from "@/components/SupportModal";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +76,7 @@ interface Project {
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -434,7 +437,7 @@ const ProjectDetail = () => {
               </p>
               <Button 
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => window.open('mailto:support@podbook.com?subject=Order%20Question', '_blank')}
+                onClick={() => setShowContactSupportModal(true)}
               >
                 <MessageCircle className="w-4 h-5 mr-2" />
                 Contact Support
@@ -711,54 +714,12 @@ const ProjectDetail = () => {
         )}
 
         {/* Contact Support Modal */}
-        {showContactSupportModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-card border border-border rounded-lg p-8 max-w-md w-full relative shadow-lg max-h-[90vh] overflow-y-auto">
-              {/* Close button */}
-              <button
-                onClick={() => setShowContactSupportModal(false)}
-                className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
-              {/* Support icon */}
-              <div className="text-center mb-6">
-                <div className="w-20 h-20 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
-                  <MessageSquare className="w-12 h-12 text-blue-600" />
-                </div>
-              </div>
-              
-              {/* Support message */}
-              <h2 className="text-2xl font-bold text-center mb-4 text-foreground">
-                Contact Support
-              </h2>
-              <p className="text-center text-muted-foreground mb-6">
-                Our support team is here to help with any questions about your book or order.
-              </p>
-              
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline"
-                  onClick={() => setShowContactSupportModal(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setShowContactSupportModal(false);
-                    window.open('mailto:support@podbook.com?subject=Book%20Support%20Question', '_blank');
-                  }}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  Send Email
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <SupportModal
+          isOpen={showContactSupportModal}
+          onClose={() => setShowContactSupportModal(false)}
+          pageUrl={window.location.href}
+          userEmail={user?.email}
+        />
 
         {/* View Book Modal */}
         {showViewBookModal && (

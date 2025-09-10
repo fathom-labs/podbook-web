@@ -105,36 +105,35 @@ const LeftNavigation = ({ activePage = 'dashboard' }: LeftNavigationProps) => {
       {isAuthenticated && user ? (
         <div className="p-6 border-t border-border mt-auto">
           <div className="group relative">
-            <div className="flex items-center space-x-3 p-3 rounded-lg cursor-pointer hover:bg-muted transition-colors">
+            <div className="flex items-center space-x-2 p-2 rounded-lg cursor-pointer hover:bg-muted transition-colors">
               <div 
                 className="flex items-center justify-center"
                 style={{ 
-                  width: '40px', 
-                  height: '40px'
+                  width: '32px', 
+                  height: '32px'
                 }}
               >
                 <User className="w-5 h-5 text-foreground" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
+                <p className="text-xs text-muted-foreground truncate mt-1" title={user.email}>{user.email}</p>
               </div>
-              <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
             </div>
 
             {/* Settings Dropdown - appears on hover and stays open */}
             <div className="absolute bottom-full left-0 right-0 mb-0 bg-background border border-border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto hover:opacity-100">
               <div className="p-2">
-                <div className="px-3 py-2 text-sm font-medium text-muted-foreground border-b border-border mb-2 settings-dropdown">
+                {/*<div className="px-3 py-2 text-sm font-medium text-muted-foreground border-b border-border mb-2 settings-dropdown">
                   Credits 2392
-                </div>
+                </div>*/}
                 <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => navigate('/settings')}>
                   <Settings className="w-4 h-4 mr-3" />
                   Settings
                 </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => navigate('/settings')}>
+                <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => navigate('/settings?section=billing')}>
                   <CreditCard className="w-4 h-4 mr-3" />
-                  Billing and Plan
+                  Billing
                 </Button>
                 <Button variant="ghost" size="sm" className="w-full justify-start" onClick={toggleTheme}>
                   {theme === 'dark' ? <Sun className="w-4 h-4 mr-3" /> : <Moon className="w-4 h-4 mr-3" />}
