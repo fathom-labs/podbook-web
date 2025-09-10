@@ -112,6 +112,7 @@ const BookCreationWizard = () => {
   const [projectId, setProjectId] = useState<string | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
   const [showChangesSaved, setShowChangesSaved] = useState(false);
+  const projectCreationPromiseRef = useRef<Promise<string | null> | null>(null);
 
   const toggleEpisodeSelection = (episodeId: number) => {
     setSelectedEpisodes(prev => {
@@ -125,38 +126,55 @@ const BookCreationWizard = () => {
     });
   };
 
-  // Helper function to create project only when needed
+  // Helper function to create project only when needed (with mutex to prevent duplicates)
   const ensureProjectExists = async (): Promise<string | null> => {
+    // If we already have a project ID, return it immediately
     if (projectId) {
       return projectId;
     }
 
-    try {
-      const payload = {
-        type: selectedBookType || undefined,
-        details: bookDetails,
-        specs: bookSpecs,
-        content: {
-          rssFeed: contentSources.rssFeed,
-          uploadedFiles: contentSources.uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
-          textContent: contentSources.textContent,
-          urls: contentSources.urls,
-          selectedEpisodes: Array.from(selectedEpisodes),
-        },
-        step: currentStep,
-      } as any;
-      
-      const resp = await projectAPI.saveProject(payload);
-      const savedId = resp?.data?.id || resp?.id;
-      if (savedId) {
-        setProjectId(savedId);
-        return savedId;
-      }
-      return null;
-    } catch (error) {
-      console.error('Failed to create project:', error);
-      return null;
+    // If there's already a project creation in progress, wait for it
+    if (projectCreationPromiseRef.current) {
+      console.log('Project creation already in progress, waiting...');
+      return await projectCreationPromiseRef.current;
     }
+
+    // Create a new project creation promise
+    projectCreationPromiseRef.current = (async () => {
+      try {
+        const payload = {
+          type: selectedBookType || undefined,
+          details: bookDetails,
+          specs: bookSpecs,
+          content: {
+            rssFeed: contentSources.rssFeed,
+            uploadedFiles: contentSources.uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+            textContent: contentSources.textContent,
+            urls: contentSources.urls,
+            selectedEpisodes: Array.from(selectedEpisodes),
+          },
+          step: currentStep,
+        } as any;
+        
+        console.log('Creating new project...');
+        const resp = await projectAPI.saveProject(payload);
+        const savedId = resp?.data?.id || resp?.id;
+        if (savedId) {
+          setProjectId(savedId);
+          console.log('Project created successfully:', savedId);
+          return savedId;
+        }
+        return null;
+      } catch (error) {
+        console.error('Failed to create project:', error);
+        return null;
+      } finally {
+        // Clear the promise reference when done
+        projectCreationPromiseRef.current = null;
+      }
+    })();
+
+    return await projectCreationPromiseRef.current;
   };
 
   useEffect(() => {
@@ -303,6 +321,13 @@ const BookCreationWizard = () => {
   // Clean up invalid uploading files
   useEffect(() => {
     setUploadingFiles(prev => prev.filter(f => f && f.file));
+  }, []);
+
+  // Clean up project creation promise on unmount
+  useEffect(() => {
+    return () => {
+      projectCreationPromiseRef.current = null;
+    };
   }, []);
 
   // Helper function to extract duration from audio/video files
