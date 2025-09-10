@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,44 +7,269 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Logo from '@/components/Logo';
 import { 
   User, 
   CreditCard, 
   Home,
-  ChevronLeft
+  ChevronLeft,
+  Save,
+  Loader2
 } from 'lucide-react';
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  bio?: string;
+  website?: string;
+  avatar?: string;
+  role: string;
+  subscriptionTier: string;
+  credits: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user: authUser, isAuthenticated } = useAuth();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('account');
+  
+  // User profile state
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    bio: '',
+    website: ''
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // API functions
+  const fetchUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/users/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const data = await response.json();
+      setUserProfile(data.user);
+      setFormData({
+        name: data.user.name || '',
+        bio: data.user.bio || '',
+        website: data.user.website || ''
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveUserProfile = async () => {
+    try {
+      setIsSaving(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+
+      const data = await response.json();
+      setUserProfile(data.user);
+      setHasChanges(false);
+      setSuccessMessage('Profile updated successfully!');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle URL parameters for section navigation
+  useEffect(() => {
+    const section = searchParams.get('section');
+    if (section && (section === 'account' || section === 'billing')) {
+      setActiveSection(section);
+    }
+  }, [searchParams]);
+
+  // Load user profile on component mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUserProfile();
+    }
+  }, [isAuthenticated]);
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold mb-4">Authentication Required</h1>
+          <p className="text-muted-foreground mb-6">Please log in to access your settings.</p>
+          <Button asChild>
+            <Link to="/login">Go to Login</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Check for changes
+  useEffect(() => {
+    if (userProfile) {
+      const hasFormChanges = 
+        formData.name !== (userProfile.name || '') ||
+        formData.bio !== (userProfile.bio || '') ||
+        formData.website !== (userProfile.website || '');
+      setHasChanges(hasFormChanges);
+    }
+  }, [formData, userProfile]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section);
+    navigate(`/settings?section=${section}`, { replace: true });
+  };
 
   const renderAccountSettings = () => (
     <div className="space-y-6">
+      {/* Error and Success Messages */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          {error}
+        </div>
+      )}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
+          {successMessage}
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Profile Information</CardTitle>
           <CardDescription>Update your account information and preferences</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" defaultValue="John" />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span className="ml-2">Loading profile...</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" defaultValue="Doe" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue="john.doe@example.com" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
-            <Input id="bio" placeholder="Tell us about yourself..." />
-          </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input 
+                  id="name" 
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter your full name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={userProfile?.email || ''} 
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Email cannot be changed. Contact support if you need to update your email.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Input 
+                  id="bio" 
+                  value={formData.bio}
+                  onChange={(e) => handleInputChange('bio', e.target.value)}
+                  placeholder="Tell us about yourself..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input 
+                  id="website" 
+                  value={formData.website}
+                  onChange={(e) => handleInputChange('website', e.target.value)}
+                  placeholder="https://yourwebsite.com"
+                />
+              </div>
+              
+              {/* Save Button */}
+              <div className="flex justify-end pt-4">
+                <Button 
+                  onClick={saveUserProfile}
+                  disabled={!hasChanges || isSaving}
+                  className="min-w-[120px]"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -176,7 +401,7 @@ const Settings = () => {
             <Button 
               variant={activeSection === 'account' ? 'default' : 'ghost'} 
               className="w-full justify-start"
-              onClick={() => setActiveSection('account')}
+              onClick={() => handleSectionChange('account')}
             >
               <User className="w-4 h-4 mr-3" />
               Account Settings
@@ -184,10 +409,10 @@ const Settings = () => {
             <Button 
               variant={activeSection === 'billing' ? 'default' : 'ghost'} 
               className="w-full justify-start"
-              onClick={() => setActiveSection('billing')}
+              onClick={() => handleSectionChange('billing')}
             >
               <CreditCard className="w-4 h-4 mr-3" />
-              Billing and Plan
+              Billing
             </Button>
           </div>
         </div>

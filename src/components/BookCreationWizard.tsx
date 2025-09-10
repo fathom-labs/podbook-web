@@ -300,6 +300,11 @@ const BookCreationWizard = () => {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [createPodiumPackage] = useMutation(CREATE_PODIUM_PACKAGE);
 
+  // Clean up invalid uploading files
+  useEffect(() => {
+    setUploadingFiles(prev => prev.filter(f => f && f.file));
+  }, []);
+
   // Helper function to extract duration from audio/video files
   const getFileDuration = (file: File): Promise<number> => {
     return new Promise((resolve) => {
@@ -342,11 +347,14 @@ const BookCreationWizard = () => {
       status: 'pending' as const
     }));
     
+    // Store the starting index before adding new files
+    const startingIndex = uploadingFiles.length;
     setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
   
-    for (let i = 0; i < newUploadingFiles.length; i++) {
-      const { file } = newUploadingFiles[i];
-      const fileIndex = uploadingFiles.length + i;
+    // Process all files in parallel for better user experience
+    const uploadPromises = newUploadingFiles.map(async (uploadingFile, i) => {
+      const { file } = uploadingFile;
+      const fileIndex = startingIndex + i;
       
       try {
         setUploadingFiles(prev => {
@@ -405,13 +413,32 @@ const BookCreationWizard = () => {
           projectId: effectiveProjectId,
           duration: duration // Now includes the extracted duration
         };
+        
+        console.log(`Upload completed for file: ${file.name}, adding to state`);
   
         // Update state
         setUploadingFiles(prev => prev.filter((_, idx) => idx !== fileIndex));
-        setContentSources(prev => ({
-          ...prev,
-          uploadedFiles: [...prev.uploadedFiles, uploadedFileData]
-        }));
+        setContentSources(prev => {
+          // Check if file already exists to prevent duplicates
+          const fileExists = prev.uploadedFiles.some(existingFile => 
+            existingFile.name === uploadedFileData.name && 
+            existingFile.size === uploadedFileData.size
+          );
+          
+          if (fileExists) {
+            console.log(`File ${uploadedFileData.name} already exists, skipping duplicate`);
+            console.log('Current uploaded files:', prev.uploadedFiles.map(f => f.name));
+            return prev;
+          }
+          
+          console.log(`Adding file ${uploadedFileData.name} to uploadedFiles`);
+          console.log('Current uploaded files before add:', prev.uploadedFiles.map(f => f.name));
+          
+          return {
+            ...prev,
+            uploadedFiles: [...prev.uploadedFiles, uploadedFileData]
+          };
+        });
   
       } catch (error) {
         console.error("Upload failed:", file.name, error);
@@ -425,7 +452,10 @@ const BookCreationWizard = () => {
           return updated;
         });
       }
-    }
+    });
+
+    // Wait for all uploads to complete (or fail)
+    await Promise.allSettled(uploadPromises);
   };
 
   const removeFile = (index: number) => {
@@ -836,33 +866,35 @@ const BookCreationWizard = () => {
                 onChange={(e) => handleFileUpload(e.target.files)}
               />
             </div>
-            {uploadingFiles.length > 0 && (
+            {uploadingFiles.filter(f => f && f.file).length > 0 && (
               <div className="mt-4 space-y-2">
                 <h4 className="font-medium">Uploading Files:</h4>
-                {uploadingFiles.map((uploadingFile, index) => (
-                  <div key={index} className="p-2 bg-muted rounded">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        <span className="text-sm">{uploadingFile.file.name}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {(uploadingFile.file.size / 1024 / 1024).toFixed(2)} MB
-                        </Badge>
-                        {uploadingFile.status === 'error' && (
-                          <span className="text-xs text-red-500">{uploadingFile.error}</span>
+                {uploadingFiles
+                  .filter(f => f && f.file)
+                  .map((uploadingFile, index) => (
+                    <div key={index} className="p-2 bg-muted rounded">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          <span className="text-sm">{uploadingFile.file.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {(uploadingFile.file.size / 1024 / 1024).toFixed(2)} MB
+                          </Badge>
+                          {uploadingFile.status === 'error' && (
+                            <span className="text-xs text-red-500">{uploadingFile.error}</span>
+                          )}
+                        </div>
+                        {uploadingFile.status === 'uploading' && (
+                          <span className="text-xs text-muted-foreground">
+                            {uploadingFile.progress}%
+                          </span>
                         )}
                       </div>
                       {uploadingFile.status === 'uploading' && (
-                        <span className="text-xs text-muted-foreground">
-                          {uploadingFile.progress}%
-                        </span>
+                        <Progress value={uploadingFile.progress} className="h-2" />
                       )}
                     </div>
-                    {uploadingFile.status === 'uploading' && (
-                      <Progress value={uploadingFile.progress} className="h-2" />
-                    )}
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
             {contentSources.uploadedFiles.map((file, index) => (
